@@ -6,8 +6,10 @@ import base64
 import uuid
 from datetime import datetime
 from functools import wraps
-from flask import Flask, request, Response, jsonify, send_from_directory, g, session, abort
+from flask import Flask, request, Response, jsonify, send_from_directory, g, session, abort, has_request_context
+from flask.sessions import SecureCookieSessionInterface
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
@@ -20,12 +22,30 @@ try:
 except Exception:
     pass
 
+
+class AdaptiveSecureCookieSessionInterface(SecureCookieSessionInterface):
+    """按 SESSION_COOKIE_SECURE 与当前请求是否 HTTPS 决定是否设置 Secure Cookie。
+    解决：仅用 http://IP 访问时若误设 SECURE=1，浏览器不发送 Cookie 导致全部 API 401。"""
+
+    def get_cookie_secure(self, app):
+        raw = os.getenv('SESSION_COOKIE_SECURE', 'auto').strip().lower()
+        if raw in ('1', 'true', 'yes', 'on'):
+            return True
+        if raw in ('0', 'false', 'no', 'off'):
+            return False
+        if has_request_context():
+            return request.is_secure
+        return False
+
+
 app = Flask(__name__)
+app.session_interface = AdaptiveSecureCookieSessionInterface()
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['SESSION_COOKIE_NAME'] = os.getenv('SESSION_COOKIE_NAME', 'lx_session')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', '0').lower() in ('1', 'true', 'yes')
+# 兼容仅读 app.config 的扩展；实际 Secure 以 AdaptiveSecureCookieSessionInterface 为准
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'auto').lower() in ('1', 'true', 'yes')
 TOKEN_TTL = int(os.getenv('AUTH_TOKEN_TTL', '604800'))
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='lx-auth')
 
@@ -38,6 +58,10 @@ CORS(
     expose_headers=["Content-Type"],
     allow_headers=["Authorization", "Content-Type", "X-App-Id"]
 )
+
+# Nginx 终止 HTTPS 时把 X-Forwarded-Proto 传给 Werkzeug，request.is_secure 才为 True（配合 auto Cookie）
+if os.getenv('TRUST_PROXY_HEADERS', '1').lower() in ('1', 'true', 'yes', 'on'):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 # 上游 Hiagent 配置（从环境变量读取，提供默认值以便开发测试）
 UPSTREAM_URL = os.getenv(
