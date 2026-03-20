@@ -58,7 +58,7 @@ const router = useRouter()
 
 async function logout() {
   try {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' })
   } catch (_) {}
   await router.push('/login')
 }

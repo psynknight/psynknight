@@ -12,9 +12,11 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 
+# 与 server.py 同目录的 .env（不依赖 gunicorn/systemd 的 WorkingDirectory）
+_BASE_DIR_FOR_ENV = os.path.dirname(os.path.abspath(__file__))
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(os.path.join(_BASE_DIR_FOR_ENV, '.env'))
 except Exception:
     pass
 
@@ -48,7 +50,7 @@ HIAGENT_USE_BEARER = os.getenv("HIAGENT_USE_BEARER", "true").lower() in ("1", "t
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = _BASE_DIR_FOR_ENV
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -240,6 +242,15 @@ def save_chat_message(user_id: int, role: str, content: str, session_id: str = N
 
 
 init_db()
+
+
+@app.after_request
+def _no_cache_api_responses(response):
+    """避免浏览器缓存 /api/* 的鉴权结果，防止「/api/users/me 显示已登录但发消息 401」。"""
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store, private'
+        response.headers['Pragma'] = 'no-cache'
+    return response
 
 
 @app.route('/api/health', methods=['GET'])

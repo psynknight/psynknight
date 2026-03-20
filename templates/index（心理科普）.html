@@ -365,7 +365,7 @@
       <div class="input-wrap">
         <div class="input-row">
           <input type="text" id="input" placeholder="输入你的问题，让春风为你解答..." autocomplete="off">
-          <button id="send" type="button"><i class="fa-solid fa-paper-plane"></i></button>
+          <button id="send" type="button" disabled><i class="fa-solid fa-paper-plane"></i></button>
         </div>
       </div>
     </main>
@@ -518,7 +518,7 @@
     let medRunning = false;
 
     async function checkAuth() {
-      const r = await fetch('/api/users/me', { credentials: 'include' });
+      const r = await fetch('/api/users/me', { credentials: 'include', cache: 'no-store' });
       if (!r.ok) { location.href = '/login'; return false; }
       try {
         const data = await r.json();
@@ -560,7 +560,7 @@
 
     async function loadSessionsFromServer() {
       try {
-        const r = await fetch('/api/users/me/messages?limit=2000', { credentials: 'include' });
+        const r = await fetch('/api/users/me/messages?limit=2000', { credentials: 'include', cache: 'no-store' });
         if (!r.ok) return;
         const data = await r.json();
         sessions = groupMessagesToSessions(data.messages || []);
@@ -616,7 +616,8 @@
         const q = id === 'legacy' ? '' : id;
         await fetch('/api/users/me/messages?session_id=' + encodeURIComponent(q), {
           method: 'DELETE',
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store'
         });
       } catch (_) {}
       await loadSessionsFromServer();
@@ -752,6 +753,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          cache: 'no-store',
           body: JSON.stringify({
             session_id: currentSessionId,
             messages: [{ role: 'system', content: SYS }, ...history.slice(-MAX_HIST)],
@@ -814,6 +816,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          cache: 'no-store',
           body: JSON.stringify({
             skip_persist: true,
             messages: [
@@ -964,7 +967,8 @@
         const q = sid === 'legacy' ? '' : sid;
         await fetch('/api/users/me/messages?session_id=' + encodeURIComponent(q), {
           method: 'DELETE',
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store'
         });
       } catch (_) {}
       await loadSessionsFromServer();
@@ -981,6 +985,7 @@
 
     (async () => {
       if (!(await checkAuth())) return;
+      sendBtn.disabled = false;
       await loadSessionsFromServer();
       if (sessions.length) {
         currentSessionId = sessions[0].id;

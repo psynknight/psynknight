@@ -85,6 +85,7 @@ async function submit() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      cache: 'no-store',
       body: JSON.stringify({
         username: username.value,
         password: password.value,

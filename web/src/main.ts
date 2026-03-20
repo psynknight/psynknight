@@ -11,7 +11,7 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   if (to.meta?.public) return true
-  const res = await fetch('/api/users/me', { credentials: 'include' })
+  const res = await fetch('/api/users/me', { credentials: 'include', cache: 'no-store' })
   if (res.ok) return true
   return { path: '/login', query: { redirect: to.fullPath } }
 })

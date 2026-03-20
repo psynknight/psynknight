@@ -324,7 +324,7 @@
       <div class="input-wrap">
         <div class="input-row">
           <input type="text" id="input" placeholder="说说你想聊的，我在这里倾听..." autocomplete="off">
-          <button id="send" type="button"><i class="fa-solid fa-paper-plane"></i></button>
+          <button id="send" type="button" disabled><i class="fa-solid fa-paper-plane"></i></button>
         </div>
       </div>
     </main>
@@ -477,7 +477,7 @@
     async function hydrateCompanionHistory() {
       if (!currentSessionId) return;
       try {
-        const r = await fetch('/api/users/me/messages?limit=2000', { credentials: 'include' });
+        const r = await fetch('/api/users/me/messages?limit=2000', { credentials: 'include', cache: 'no-store' });
         if (!r.ok) return;
         const data = await r.json();
         const msgs = (data.messages || []).filter(
@@ -496,7 +496,7 @@
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
     async function checkAuth() {
-      const r = await fetch('/api/users/me', { credentials: 'include' });
+      const r = await fetch('/api/users/me', { credentials: 'include', cache: 'no-store' });
       if (!r.ok) { location.href = '/login'; return false; }
       try {
         const data = await r.json();
@@ -591,6 +591,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          cache: 'no-store',
           body: JSON.stringify({
             session_id: currentSessionId,
             messages: [{ role: 'system', content: SYS }, ...history.slice(-MAX_HIST)],
@@ -668,6 +669,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          cache: 'no-store',
           body: JSON.stringify({
             skip_persist: true,
             messages: [
@@ -827,7 +829,7 @@
     document.getElementById('saveDiary').onclick = saveDiary;
 
     document.getElementById('btnLogout').onclick = async () => {
-      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' }); } catch (_) {}
       location.href = '/login';
     };
 
@@ -837,7 +839,8 @@
         if (currentSessionId) {
           await fetch('/api/users/me/messages?session_id=' + encodeURIComponent(currentSessionId), {
             method: 'DELETE',
-            credentials: 'include'
+            credentials: 'include',
+            cache: 'no-store'
           });
         }
       } catch (_) {}
@@ -864,6 +867,7 @@
 
     (async () => {
       if (!(await checkAuth())) return;
+      sendBtn.disabled = false;
       currentSessionId = loadOrCreateSessionId();
       await hydrateCompanionHistory();
       if (history.length === 0) {
