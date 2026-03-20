@@ -737,6 +737,7 @@
     }
 
     async function sendMsg() {
+      if (!(await checkAuth())) return;
       const text = input.value.trim();
       if (!text) return;
       input.value = '';
@@ -808,6 +809,7 @@
     }
 
     async function openSpectrum() {
+      if (!(await checkAuth())) return;
       openModal('modalSpectrum');
       document.getElementById('spectrumTip').textContent = '分析中...';
       const text = history.filter(m => m.role === 'user').map(m => m.content).join(' ') || '暂无对话内容';
@@ -828,6 +830,10 @@
           })
         });
         const data = await r.json().catch(() => ({}));
+        if (r.status === 401) {
+          location.href = '/login';
+          return;
+        }
         const raw = data?.choices?.[0]?.message?.content || data?.content || '';
         let emo = { happy: 0.3, sad: 0.2, angry: 0.1, calm: 0.4, surprised: 0.15, fear: 0.1 };
         try {

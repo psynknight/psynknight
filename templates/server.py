@@ -4,7 +4,7 @@ import logging
 import sqlite3
 import base64
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, Response, jsonify, send_from_directory, g, session, abort, has_request_context
 from flask.sessions import SecureCookieSessionInterface
@@ -46,6 +46,10 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
 # 兼容仅读 app.config 的扩展；实际 Secure 以 AdaptiveSecureCookieSessionInterface 为准
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'auto').lower() in ('1', 'true', 'yes')
+app.config['SESSION_COOKIE_PATH'] = os.getenv('SESSION_COOKIE_PATH', '/')
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+SESSION_TTL = int(os.getenv('SESSION_TTL', '604800'))
+app.permanent_session_lifetime = timedelta(seconds=SESSION_TTL)
 TOKEN_TTL = int(os.getenv('AUTH_TOKEN_TTL', '604800'))
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='lx-auth')
 
@@ -242,6 +246,15 @@ def login_required(fn):
     def wrapper(*args, **kwargs):
         user = get_current_user()
         if not user:
+            has_session_cookie = app.config['SESSION_COOKIE_NAME'] in request.cookies
+            logger.warning(
+                "401 unauthorized path=%s secure=%s xfp=%s has_cookie=%s remote=%s",
+                request.path,
+                request.is_secure,
+                request.headers.get('X-Forwarded-Proto', ''),
+                has_session_cookie,
+                request.remote_addr,
+            )
             return jsonify({"error": "unauthorized", "message": "请先登录"}), 401
         return fn(*args, **kwargs)
     return wrapper
@@ -402,7 +415,10 @@ def register():
     except sqlite3.IntegrityError:
         return jsonify({"error": "user_exists", "message": "用户名已被占用"}), 409
 
+    session.clear()
     session['user_id'] = user_id
+    session.permanent = True
+    session.modified = True
     token = generate_token_for_user(user_id)
     return jsonify({"token": token, "user": serialize_user(user)}), 201
 
@@ -431,7 +447,10 @@ def login():
     user_dict = serialize_user(user)
     if user_dict:
         user_dict["last_login"] = last_login
+    session.clear()
     session['user_id'] = int(user["id"])
+    session.permanent = True
+    session.modified = True
     token = generate_token_for_user(user["id"])
     return jsonify({"token": token, "user": user_dict})
 
