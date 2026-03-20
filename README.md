@@ -1,6 +1,6 @@
 # 聆心小开（psynknight）
 
-心理陪伴与心理科普相关功能：Flask 后端 + Vue 前端（Vite），详见 [GitHub 仓库](https://github.com/psynknight/psynknight)。
+心理陪伴与心理科普相关功能：Flask 后端 + Vue 前端（Vite）。本仓库用于**不同分支的代码维护**，主页：<https://github.com/psynknight/psynknight>。
 
 ## 目录结构
 
