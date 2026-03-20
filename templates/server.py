@@ -156,16 +156,29 @@ def close_db(exception):
         conn.close()
 
 
-def serialize_user(row):
+def _is_admin_user(user) -> bool:
+    """判断是否为管理员账号（用户名+学号匹配配置）。"""
+    if not user:
+        return False
+    admin_name = os.getenv('ADMIN_USERNAME', '李宏伟').strip()
+    admin_sid = os.getenv('ADMIN_STUDENT_ID', '2312627').strip()
+    return (str(user.get('username', '')).strip() == admin_name and
+            str(user.get('student_id', '')).strip() == admin_sid)
+
+
+def serialize_user(row, include_admin=False):
     if not row:
         return None
-    return {
+    out = {
         "id": row["id"],
         "username": row["username"],
         "student_id": row["student_id"],
         "created_at": row["created_at"],
         "last_login": row["last_login"]
     }
+    if include_admin:
+        out["is_admin"] = _is_admin_user(row)
+    return out
 
 
 def get_user_by_username(username: str):
@@ -305,6 +318,7 @@ def serve_index():
 
 @app.route('/login', methods=['GET'])
 @app.route('/home', methods=['GET'])
+@app.route('/admin', methods=['GET'])
 @app.route('/info', methods=['GET'])
 @app.route('/companion', methods=['GET'])
 @app.route('/users', methods=['GET'])
@@ -464,7 +478,8 @@ def logout():
 @app.route('/api/users/me', methods=['GET'])
 @login_required
 def current_user():
-    return jsonify({"user": serialize_user(get_current_user())})
+    user = get_current_user()
+    return jsonify({"user": serialize_user(user, include_admin=True)})
 
 
 @app.route('/api/users', methods=['GET'])
@@ -530,6 +545,65 @@ def my_messages():
         for row in cursor.fetchall()
     ]
     return jsonify({"messages": messages})
+
+
+def admin_required(fn):
+    """要求已登录且为管理员账号。"""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "unauthorized", "message": "请先登录"}), 401
+        if not _is_admin_user(user):
+            return jsonify({"error": "forbidden", "message": "无权限"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+@app.route('/api/admin/export-all', methods=['GET'])
+@admin_required
+def admin_export_all_chats():
+    """管理员专属：导出全站聊天记录，按账号分块。"""
+    conn = get_db()
+    cursor = conn.execute("""
+        SELECT u.id AS user_id, u.username, u.student_id, u.created_at, u.last_login,
+               c.id AS msg_id, c.role, c.content, c.session_id, c.created_at AS msg_created
+        FROM users u
+        LEFT JOIN chat_messages c ON c.user_id = u.id
+        ORDER BY u.id, c.created_at ASC
+    """)
+    from collections import OrderedDict
+    users_map = OrderedDict()
+    for row in cursor.fetchall():
+        uid = row["user_id"]
+        if uid not in users_map:
+            users_map[uid] = {
+                "user_id": uid,
+                "username": row["username"],
+                "student_id": row["student_id"],
+                "created_at": row["created_at"],
+                "last_login": row["last_login"],
+                "messages": []
+            }
+        if row["msg_id"] is not None:
+            users_map[uid]["messages"].append({
+                "id": row["msg_id"],
+                "role": row["role"],
+                "content": row["content"],
+                "session_id": row["session_id"],
+                "created_at": row["msg_created"]
+            })
+    out = {
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "users": list(users_map.values())
+    }
+    body = json.dumps(out, ensure_ascii=False, indent=2).encode('utf-8')
+    fname = f"chat_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+    return Response(
+        body,
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename="{fname}"'}
+    )
 
 
 @app.route('/api/users/me/messages', methods=['DELETE'])

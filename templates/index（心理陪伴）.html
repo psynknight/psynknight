@@ -568,6 +568,7 @@
 
     async function streamChat(text) {
       if (!(await checkAuth())) return;
+      var t = text.trim();
       bumpWind();
       history.push({ role: 'user', content: text });
       addMsg(text, 'user');

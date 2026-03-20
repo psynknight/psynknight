@@ -36,6 +36,18 @@
         </div>
       </section>
 
+      <section v-if="isAdmin" class="nav-section">
+        <h2 class="section-label">管理</h2>
+        <a class="nav-card admin-card" href="/admin">
+          <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
+          <div class="nav-body">
+            <h3>管理后台</h3>
+            <p>导出全站聊天记录</p>
+          </div>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </a>
+      </section>
+
       <section class="nav-section">
         <h2 class="section-label">应用</h2>
         <a class="nav-card" href="/聆心小开.apk" download="聆心小开.apk">
@@ -52,9 +64,21 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const isAdmin = ref(false)
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/users/me', { credentials: 'include', cache: 'no-store' })
+    if (res.ok) {
+      const data = await res.json()
+      isAdmin.value = !!data?.user?.is_admin
+    }
+  } catch (_) {}
+})
 
 async function logout() {
   try {
@@ -205,5 +229,10 @@ async function logout() {
   margin-left: auto;
   color: #87998d;
   font-size: 0.85rem;
+}
+
+.admin-card .nav-icon {
+  background: #f0e8e8;
+  color: #a47d7d;
 }
 </style>
