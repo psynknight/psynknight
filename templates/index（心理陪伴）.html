@@ -209,7 +209,7 @@
     .menu-toggle { display: none; background: none; border: none; font-size: 20px; color: var(--text-main); cursor: pointer; }
 
     .sidebar-backdrop {
-      display: none; position: fixed; inset: 0; z-index: 99; background: rgba(58,74,65,0.2);
+      display: none; position: fixed; inset: 0; z-index: 100; background: rgba(58,74,65,0.2);
     }
     .sidebar-backdrop.show { display: block; }
 
@@ -270,9 +270,14 @@
       .input-wrap { padding: 15px 5%; }
     }
 
+    @media (min-width: 769px) {
+      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 101; }
+      .app-layout { margin-left: 260px; }
+    }
+
     @media (max-width: 768px) {
       .menu-toggle { display: block; }
-      .sidebar { position: fixed; left: 0; top: 0; z-index: 100; transform: translateX(-100%); }
+      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 101; transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); }
       .msg-content-wrap { max-width: 85%; }
     }
@@ -281,33 +286,32 @@
 <body>
   <div id="canvas-container"></div>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-heart"></i></div>
+      <div class="brand-text">聆心小开</div>
+    </div>
+
+    <div class="nav-title">陪伴空间</div>
+    <nav class="nav-menu" style="flex:1;">
+      <button type="button" class="nav-item active" data-view="chat" id="navChat"><i class="fa-solid fa-comments"></i> 倾诉树洞</button>
+      <button type="button" class="nav-item" data-action="emotion"><i class="fa-solid fa-chart-line"></i> 情绪分析</button>
+      <button type="button" class="nav-item" data-action="diary"><i class="fa-solid fa-book"></i> 心理日记</button>
+      <button type="button" class="nav-item" data-action="calendar"><i class="fa-solid fa-calendar"></i> 情绪日历</button>
+      <a class="nav-item" href="/"><i class="fa-solid fa-house"></i> 返回首页</a>
+      <button type="button" class="nav-item" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> 退出登录</button>
+    </nav>
+
+    <div class="user-profile" id="userProfile" title="个人资料">
+      <div class="user-avatar"><img id="userAvatarImg" src="https://api.dicebear.com/7.x/avataaars/svg?seed=heart" alt=""></div>
+      <div class="user-info">
+        <div class="user-name" id="userDisplayName">旅人</div>
+        <div class="user-status"><span class="status-dot"></span> 正在倾听</div>
+      </div>
+    </div>
+  </aside>
 
   <div class="app-layout">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-icon"><i class="fa-solid fa-heart"></i></div>
-        <div class="brand-text">聆心小开</div>
-      </div>
-
-      <div class="nav-title">陪伴空间</div>
-      <nav class="nav-menu" style="flex:1;">
-        <button type="button" class="nav-item active" data-view="chat" id="navChat"><i class="fa-solid fa-comments"></i> 倾诉树洞</button>
-        <button type="button" class="nav-item" data-action="emotion"><i class="fa-solid fa-chart-line"></i> 情绪分析</button>
-        <button type="button" class="nav-item" data-action="diary"><i class="fa-solid fa-book"></i> 心理日记</button>
-        <button type="button" class="nav-item" data-action="calendar"><i class="fa-solid fa-calendar"></i> 情绪日历</button>
-        <a class="nav-item" href="/"><i class="fa-solid fa-house"></i> 返回首页</a>
-        <button type="button" class="nav-item" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> 退出登录</button>
-      </nav>
-
-      <div class="user-profile" id="userProfile" title="个人资料">
-        <div class="user-avatar"><img id="userAvatarImg" src="https://api.dicebear.com/7.x/avataaars/svg?seed=heart" alt=""></div>
-        <div class="user-info">
-          <div class="user-name" id="userDisplayName">旅人</div>
-          <div class="user-status"><span class="status-dot"></span> 正在倾听</div>
-        </div>
-      </div>
-    </aside>
-
     <main class="chat-main">
       <header class="top-header">
         <div class="header-title">
