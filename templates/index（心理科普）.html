@@ -317,10 +317,12 @@
 
     @media (max-width: 768px) {
       .menu-toggle { display: block; }
-      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 101; transform: translateX(-100%); touch-action: manipulation; }
-      .sidebar.open { transform: translateX(0); }
-      .nav-item { touch-action: manipulation; min-height: 44px; position: relative; z-index: 1; }
+      .sidebar { position: fixed; left: -260px; top: 0; bottom: 0; z-index: 101; touch-action: manipulation; pointer-events: auto; transition: left 0.3s ease; }
+      .sidebar.open { left: 0; }
+      .nav-item { touch-action: manipulation; min-height: 48px; position: relative; z-index: 2; pointer-events: auto; }
       .nav-item:hover { transform: none; }
+      .user-profile { min-height: 48px; pointer-events: auto; }
+      .recent-item { min-height: 44px; pointer-events: auto; }
       .msg-content-wrap { max-width: 85%; }
     }
   </style>
@@ -340,7 +342,7 @@
       <button type="button" class="nav-item" data-action="spectrum"><i class="fa-solid fa-chart-pie"></i> 情绪光谱</button>
       <button type="button" class="nav-item" data-action="meditate"><i class="fa-solid fa-wind"></i> 氧气冥想</button>
       <button type="button" class="nav-item" data-action="diary"><i class="fa-solid fa-book-open"></i> 心灵日记</button>
-      <a class="nav-item" href="/"><i class="fa-solid fa-house"></i> 返回首页</a>
+      <a class="nav-item" href="/" id="navHome"><i class="fa-solid fa-house"></i> 返回首页</a>
     </nav>
 
     <div class="nav-title" style="margin-top: 16px;">最近记录</div>
@@ -603,17 +605,27 @@
         </div>
       `).join('');
       el.querySelectorAll('.recent-item').forEach(row => {
-        row.addEventListener('click', (e) => {
+        let last = 0;
+        const tap = (e) => {
+          if (Date.now() - last < 350) return;
+          last = Date.now();
           if (e.target.closest('.recent-del')) return;
           switchSession(row.dataset.id);
           closeMobileSidebar();
-        });
+        };
+        row.addEventListener('touchend', (e) => { e.preventDefault(); tap(e); }, { passive: false });
+        row.addEventListener('click', tap);
       });
       el.querySelectorAll('.recent-del').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        let last = 0;
+        const tap = (e) => {
+          if (Date.now() - last < 350) return;
+          last = Date.now();
           e.stopPropagation();
           deleteSession(btn.dataset.del);
-        });
+        };
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); tap(e); }, { passive: false });
+        btn.addEventListener('click', tap);
       });
     }
 
@@ -924,20 +936,40 @@
       sidebarBackdrop.classList.remove('show');
     }
 
+    function mobileTap(el, handler) {
+      let last = 0;
+      const run = (e) => {
+        const now = Date.now();
+        if (now - last < 350) return;
+        last = now;
+        handler(e);
+      };
+      el.addEventListener('touchend', (e) => { e.preventDefault(); run(e); }, { passive: false });
+      el.addEventListener('click', run);
+    }
+
     menuToggle.addEventListener('click', () => {
       sidebar.classList.toggle('open');
       sidebarBackdrop.classList.toggle('show', sidebar.classList.contains('open'));
     });
+    menuToggle.addEventListener('touchend', (e) => { e.preventDefault(); menuToggle.click(); }, { passive: false });
     sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+    sidebarBackdrop.addEventListener('touchend', (e) => { e.preventDefault(); closeMobileSidebar(); }, { passive: false });
 
-    document.getElementById('navChat').addEventListener('click', () => {
+    mobileTap(document.getElementById('navChat'), () => {
       setNavActive('chat');
       document.querySelectorAll('.nav-item[data-action]').forEach(n => n.classList.remove('active'));
       closeMobileSidebar();
     });
 
+    mobileTap(document.getElementById('navHome'), (e) => {
+      e.preventDefault();
+      closeMobileSidebar();
+      location.href = '/';
+    });
+
     document.querySelectorAll('.nav-item[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      mobileTap(btn, () => {
         document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.remove('active'));
         btn.classList.add('active');
         const act = btn.dataset.action;
@@ -968,7 +1000,7 @@
       });
     });
 
-    document.getElementById('btnNewSession').addEventListener('click', () => {
+    mobileTap(document.getElementById('btnNewSession'), () => {
       newSession();
       setNavActive('chat');
       document.getElementById('navChat').classList.add('active');
@@ -992,7 +1024,7 @@
       else newSession();
     });
 
-    document.getElementById('userProfile').addEventListener('click', () => {
+    mobileTap(document.getElementById('userProfile'), () => {
       location.href = '/profile';
     });
 
