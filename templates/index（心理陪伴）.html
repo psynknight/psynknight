@@ -78,6 +78,7 @@
       color: var(--text-main); text-decoration: none; font-size: 15px; font-weight: 500;
       transition: all 0.3s ease; border: 1px solid transparent;
       background: none; width: 100%; text-align: left; font-family: inherit;
+      -webkit-tap-highlight-color: rgba(125,164,141,0.2);
     }
     .nav-item i { font-size: 16px; width: 20px; text-align: center; color: var(--text-sub); transition: 0.3s; }
 
@@ -212,6 +213,9 @@
       display: none; position: fixed; inset: 0; z-index: 100; background: rgba(58,74,65,0.2);
     }
     .sidebar-backdrop.show { display: block; }
+    @media (max-width: 768px) {
+      .sidebar-backdrop.show { left: 260px; }
+    }
 
     .modal {
       display: none; position: fixed; inset: 0; z-index: 200;
@@ -277,8 +281,10 @@
 
     @media (max-width: 768px) {
       .menu-toggle { display: block; }
-      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 101; transform: translateX(-100%); }
+      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 101; transform: translateX(-100%); touch-action: manipulation; }
       .sidebar.open { transform: translateX(0); }
+      .nav-item { touch-action: manipulation; min-height: 44px; position: relative; z-index: 1; }
+      .nav-item:hover { transform: none; }
       .msg-content-wrap { max-width: 85%; }
     }
   </style>
