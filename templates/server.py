@@ -162,8 +162,14 @@ def _is_admin_user(user) -> bool:
         return False
     admin_name = os.getenv('ADMIN_USERNAME', '李宏伟').strip()
     admin_sid = os.getenv('ADMIN_STUDENT_ID', '2312627').strip()
-    return (str(user.get('username', '')).strip() == admin_name and
-            str(user.get('student_id', '')).strip() == admin_sid)
+    # sqlite3.Row 不支持 .get，这里统一用索引读取并做兜底，避免 /api/users/me 500
+    try:
+        username = str(user['username']).strip()
+        student_id = str(user['student_id']).strip()
+    except Exception:
+        username = str(getattr(user, 'username', '')).strip()
+        student_id = str(getattr(user, 'student_id', '')).strip()
+    return username == admin_name and student_id == admin_sid
 
 
 def serialize_user(row, include_admin=False):
