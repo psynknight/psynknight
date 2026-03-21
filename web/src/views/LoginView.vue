@@ -104,7 +104,12 @@ async function submit() {
       if (welcomeEl.value) welcomeEl.value.classList.add('show')
     }, 500)
     window.setTimeout(async () => {
-      await router.replace(redirect)
+      try {
+        await router.replace(redirect)
+      } catch (_) {
+        // 路由异常时兜底，防止停留在过渡文案页
+        window.location.href = redirect
+      }
     }, 2500)
   } catch (e: any) {
     error.value = e?.message || '登录失败'
