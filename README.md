@@ -45,63 +45,116 @@ Vite 代理 `/api` 到 `http://127.0.0.1:5000`，需先启动后端。
 
 复制 `templates/.env.example` 为 `templates/.env`，配置 `DEEPSEEK_API_KEY` 等。**不要将 `.env` 提交到 Git。**
 
-## 阿里云服务器更新步骤
+## 阿里云服务器更新策略
 
 假设项目在 `~/psynknight/psynknight`，后端由 **psynknight.service**（systemd + Gunicorn）托管。
 
-### 1. 拉取最新代码
+---
+
+### 策略 A：正常网络（首选）
+
+当服务器能稳定访问 GitHub 时使用。
 
 ```bash
 cd ~/psynknight/psynknight
 git pull origin main
-```
-
-### 2. 更新依赖（可选）
-
-如 `requirements.txt` 有变动：
-
-```bash
-cd ~/psynknight/psynknight/templates
-source ../venv/bin/activate   # 若有 venv，在 templates 上一级
-pip install -r requirements.txt
-```
-
-若无 venv，用系统 Python 时可能遇到「externally managed」报错，需使用 `python3 -m venv venv` 创建虚拟环境后再安装。
-
-### 3. 重新构建前端（可选）
-
-仅当 `web/` 目录有改动时执行（心理陪伴/心理科普为静态 HTML，一般无需构建）：
-
-```bash
-cd ~/psynknight/psynknight/web
-npm install
-npm run build
-```
-
-如未安装 Node.js/npm，可跳过此步（本次侧边栏修复在 templates 静态 HTML 中，无需 build）。
-
-### 4. 重启服务
-
-```bash
 sudo systemctl restart psynknight
 ```
 
-### 5. 自检
+**若 `git pull` 报 HTTP2/TLS 错误**，可先执行：
 
 ```bash
-# 查看服务状态
-sudo systemctl status psynknight
-
-# 查看 5000 端口占用（应为 gunicorn）
-lsof -i :5000
-# 或
-ss -tlnp | grep 5000
-
-# 测试接口（若配置了 curl）
-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/
+git config --global http.version HTTP/1.1
 ```
 
-浏览器访问站点，手机端测试侧边栏按钮是否正常响应。
+---
+
+### 策略 B：网络不稳定（中国大陆常见）
+
+服务器访问 GitHub 易失败时，采用 **本地拉取 → 上传到服务器**。
+
+#### 步骤 1：在本地电脑（Windows，能访问 GitHub 的环境）
+
+```bash
+cd 你的项目目录
+git pull origin main
+```
+
+#### 步骤 2：上传到服务器
+
+**方式 1：SCP 命令行（在本地 PowerShell/CMD）**
+
+```bash
+scp -r templates root@服务器IP:~/psynknight/psynknight/
+```
+
+**方式 2：图形工具**
+
+- 用 WinSCP、FileZilla 等
+- 将本地 `templates` 目录上传到服务器 `~/psynknight/psynknight/`
+- 选择覆盖同名文件
+
+#### 步骤 3：在服务器上重启服务
+
+```bash
+ssh root@服务器IP
+sudo systemctl restart psynknight
+```
+
+---
+
+### 策略 C：仅改动了 templates 静态 HTML
+
+心理陪伴、心理科普页面在 `templates/` 下，**无需 pip、npm**，只更新文件并重启即可。
+
+| 策略 | 拉取代码 | pip | npm build | 重启 |
+|------|----------|-----|-----------|------|
+| 仅 templates 变更 | ✅ 或 策略 B | ❌ | ❌ | ✅ |
+| requirements 变更 | ✅ | ✅ | ❌ | ✅ |
+| web/ 变更 | ✅ | ❌ | ✅ | ✅ |
+
+---
+
+### 可选：pip 与 npm（有变更时）
+
+```bash
+# 依赖变更时
+cd ~/psynknight/psynknight/templates
+source ../venv/bin/activate
+pip install -r requirements.txt
+
+# 前端变更时（需 Node.js）
+cd ~/psynknight/psynknight/web
+npm install && npm run build
+```
+
+---
+
+### 自检清单
+
+```bash
+# 1. 服务状态
+sudo systemctl status psynknight
+
+# 2. 5000 端口（应为 gunicorn）
+lsof -i :5000
+
+# 3. 接口测试
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/
+# 期望输出 200 或 302
+
+# 4. 手机访问，测试侧边栏按钮是否响应
+```
+
+---
+
+### 策略选择速查
+
+| 情况 | 建议策略 |
+|------|----------|
+| `git pull` 正常 | 策略 A |
+| `git pull` 报 HTTP2/TLS 错误 | 策略 B |
+| 仅修复了 HTML/JS/CSS | 策略 B 或 A，无需 pip/npm |
 
 ---
 
